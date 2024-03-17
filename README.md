@@ -8,9 +8,9 @@ Talks to PX4 and provides telemetry and guidance for the mission.
 
 1. Install python 3.6+ for your system preferably latest stable version of python
 2. Get the code
-   1. `https://github.com/animal-locator-drone/dogfinder-backend.git`
+   1. `https://github.com/animal-locator-drone/captain.git`
 3. cd into the folder
-   1. `cd dogfinder-backend`
+   1. `cd captain`
 4. Setup a venv and activate it
    1. `python -m venv .venv`
    2. `source .venv/bin/activate`
