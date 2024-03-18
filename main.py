@@ -1,38 +1,45 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 app = FastAPI()
 
 
-@app.get("/")
-async def root():
-        return {"message": "Hello World"}
-
+class Mission(BaseModel):
+        id: str
+        name: str
+        path_preview: str
 
 @app.get("/missions_available")
-async def missions_available():
-        return {
-                "missions": [
-                        {"id": "123", "name": "Path A", "path_preview": "TODO"}
-                ]
-        }
+async def missions_available() -> list[Mission]:
+        return [
+                Mission(
+                        id="1",
+                        name="Mission 1",
+                        path_preview="path1"
+                ),
+        ]
 
 
 @app.post("/select_mission")
 async def select_mission():
         return {"status": "Mission Started"}
 
+class MissionStatus(BaseModel):
+        battery_percent: int
+        time_elapsed: int
+        current_location: list
+        time_remaining: int
+        progress_percent: int
 
 @app.get("/mission_status")
-async def mission_status():
-        return {
-                "status_info": {
-                        "battery_percent": 69,
-                        "time_elapsed": 200,
-                        "current_location": [420.69, 69.420],
-                        "time_remaining": 500,
-                        "progress_percent": 69,
-                }
-        }
+async def mission_status() -> MissionStatus:
+        return MissionStatus(
+                        battery_percent=100,
+                        time_elapsed=100,
+                        current_location=[1, 2],
+                        time_remaining=100,
+                        progress_percent=100
+                )
 
 
 @app.post("/abort_mission")
