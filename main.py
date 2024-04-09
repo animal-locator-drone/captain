@@ -1,9 +1,20 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from configparser import ConfigParser
 
 app = FastAPI()
 
+def read_config():
+    # Read configuration from config.ini
+    config = ConfigParser()
+    config.read('config.ini')
+    # Get configuration values
+    host = config.get('app', 'host')
+    port = config.getint('app', 'port')
+    reload = config.getboolean('app', 'reload')
+    return host, port, reload
 
+# Define FastAPI routes
 class Mission(BaseModel):
         id: str
         name: str
@@ -45,3 +56,9 @@ async def mission_status() -> MissionStatus:
 @app.post("/abort_mission")
 async def abort_mission():
         return {"status": "success"}
+
+# Run the FastAPI app with configured options
+if __name__ == '__main__':
+    host, port, reload = read_config()
+    import uvicorn
+    uvicorn.run("main:app", host=host, port=port, reload=reload)
