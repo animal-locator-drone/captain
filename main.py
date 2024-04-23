@@ -4,6 +4,17 @@ from configparser import ConfigParser
 import os
 from uuid import uuid4
 
+class Mission(BaseModel):
+        id: str
+        name: str
+        path_preview: str
+
+missions_store = [Mission(
+                        id=str(uuid4()),
+                        name=file.split(".")[0],
+                        path_preview="path"+str(uuid4())
+                ) for file in os.listdir("missions_available")]
+
 app = FastAPI()
 
 def read_config():
@@ -13,23 +24,16 @@ def read_config():
     # Get configuration values
     host = config.get('app', 'host')
     port = config.getint('app', 'port')
-    reload = config.getboolean('app', 'reload')
-    return host, port, reload
+    do_reload = config.getboolean('app', 'reload')
+    return host, port, do_reload
 
 # Define FastAPI routes
-class Mission(BaseModel):
-        id: str
-        name: str
-        path_preview: str
+
 
 @app.get("/missions_available")
 # async def missions_available() -> list[Mission]: # new python
 async def missions_available(): # python 3.8 etc.
-        return [Mission(
-                        id=str(uuid4()),
-                        name=file.split(".")[0],
-                        path_preview="path"+str(uuid4())
-                ) for file in os.listdir("missions_available")]
+        return missions_store
 
 
 @app.post("/select_mission/{mission_id}")
