@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from configparser import ConfigParser
 import os
+from uuid import uuid4
 
 app = FastAPI()
 
@@ -22,14 +23,13 @@ class Mission(BaseModel):
         path_preview: str
 
 @app.get("/missions_available")
-async def missions_available() -> list[Mission]:
-        return [
-                Mission(
-                        id="1",
-                        name="Mission 1",
-                        path_preview="path1"
-                ),
-        ]
+# async def missions_available() -> list[Mission]: # new python
+async def missions_available(): # python 3.8 etc.
+        return [Mission(
+                        id=str(uuid4()),
+                        name=file.split(".")[0],
+                        path_preview="path"+str(uuid4())
+                ) for file in os.listdir("missions_available")]
 
 
 @app.post("/select_mission/{mission_id}")
@@ -38,7 +38,7 @@ async def select_mission(mission_id: str):
                 return {"status": "error - mission folder missing"}
         if mission_id + ".plan" not in os.listdir("missions_available"):
                 return {"status": "error - mission not found"}
-        
+        return {"status": f"success - mission {mission_id} selected"}
 
 class MissionStatus(BaseModel):
         battery_percent: int
