@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from configparser import ConfigParser
+import os
 
 app = FastAPI()
 
@@ -31,9 +32,13 @@ async def missions_available() -> list[Mission]:
         ]
 
 
-@app.post("/select_mission")
-async def select_mission():
-        return {"status": "Mission Started"}
+@app.post("/select_mission/{mission_id}")
+async def select_mission(mission_id: str):
+        if not os.path.exists("missions_available"):
+                return {"status": "error - mission folder missing"}
+        if mission_id + ".plan" not in os.listdir("missions_available"):
+                return {"status": "error - mission not found"}
+        
 
 class MissionStatus(BaseModel):
         battery_percent: int
