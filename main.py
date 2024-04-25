@@ -66,6 +66,10 @@ async def mission_status() -> MissionStatus:
 async def abort_mission():
         return {"status": "success"}
 
+@app.get("/current_location")
+async def current_location():
+        return {"current_location": [1, 2]}
+
 # Run the FastAPI app with configured options
 if __name__ == '__main__':
     host, port, reload = read_config()
