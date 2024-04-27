@@ -17,12 +17,13 @@ Talks to PX4 and provides telemetry and guidance for the mission.
       1. You will need to rerun this in each new terminal unless you automate with VScode
 5. Install dependencies with pip
    1. `pip install -r requirements.txt`
+6. Edit your config file if necessay `config.ini`
 
 ### Running
 
 1. Activate the venv (see Prerequisites 4.2)
-2. Run the web server with auto reload
-   1. `uvicorn main:app --reload`
+2. Run the web server
+   1. `python main.py`
 
 ## Contributing
 
