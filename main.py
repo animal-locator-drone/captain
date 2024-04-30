@@ -1,8 +1,18 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
 from configparser import ConfigParser
 import os
 from uuid import uuid4
+import uvicorn
+import time
+from multiprocessing import Process, Queue
+
+from fastapi import FastAPI, Response, status
+from pydantic import BaseModel
+
+import asyncio
+
+import drone_flight
+
+drone = None
 
 class Mission(BaseModel):
         id: str
@@ -35,14 +45,48 @@ def read_config():
 async def missions_available(): # python 3.8 etc.
         return missions_store
 
+async def init_drone():
+        global drone
+        drone = await drone_flight.initialize_drone()
+        return drone
 
-@app.post("/select_mission/{mission_id}")
-async def select_mission(mission_id: str):
+
+@app.post("/select_mission/{mission_id}", status_code=200)
+async def select_mission(mission_id: str, response: Response):
         if not os.path.exists("missions_available"):
+                response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
                 return {"status": "error - mission folder missing"}
         if mission_id + ".plan" not in os.listdir("missions_available"):
+                response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
                 return {"status": "error - mission not found"}
+        
+        # drone = await drone_flight.initialize_drone()
+        if drone:
+                await drone_flight.run_mission(drone, mission_id)
+                return {"status": f"success - mission {mission_id} selected"}
+        try:
+                await asyncio.wait_for(
+                        init_drone(),
+                        timeout=10
+                )
+                
+        except asyncio.TimeoutError:
+                print("Drone initialization timeout")
+                response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+                return {"status": "error - drone initialization timeout"}
+        
+        if not drone:
+                print("Drone connection failed")
+                response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+                return {"status": "error - drone connection failed"}
+        
+        await drone_flight.run_mission(drone, mission_id)
         return {"status": f"success - mission {mission_id} selected"}
+
+@app.post("/track_dog/{dog_id}")
+async def track_dog(dog_id: str):
+        drone_flight.spiral(drone)
+        return {"status": "success"}
 
 class MissionStatus(BaseModel):
         battery_percent: int
@@ -50,20 +94,38 @@ class MissionStatus(BaseModel):
         current_location: list
         time_remaining: int
         progress_percent: int
+        in_mission: bool
 
 @app.get("/mission_status")
 async def mission_status() -> MissionStatus:
-        return MissionStatus(
-                        battery_percent=100,
-                        time_elapsed=100,
-                        current_location=[1, 2],
-                        time_remaining=100,
-                        progress_percent=100
+        if not drone:
+                return MissionStatus(
+                        battery_percent=0,
+                        time_elapsed=0,
+                        current_location=[0, 0],
+                        time_remaining=0,
+                        progress_percent=0,
+                        in_mission=False
                 )
+        
+        battery_percent = await drone_flight.get_battery(drone)
+        
+        return MissionStatus(
+                battery_percent=battery_percent,
+                time_elapsed=0,
+                current_location=[0, 0],
+                time_remaining=0,
+                progress_percent=0,
+                in_mission=True
+        )
+        
+        
+        
 
 
 @app.post("/abort_mission")
 async def abort_mission():
+        await drone.action.return_to_launch()
         return {"status": "success"}
 
 @app.get("/current_location")
@@ -72,6 +134,6 @@ async def current_location():
 
 # Run the FastAPI app with configured options
 if __name__ == '__main__':
-    host, port, reload = read_config()
-    import uvicorn
-    uvicorn.run("main:app", host=host, port=port, reload=reload)
+        host, port, reload = read_config()
+        uvicorn.run("main:app", host=host, port=port, reload=reload)
+    
