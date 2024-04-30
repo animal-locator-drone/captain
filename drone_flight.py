@@ -77,9 +77,7 @@ async def run_mission(drone, mission):
         print("-- Starting mission")
         await drone.mission_raw.start_mission()
 
-
 async def get_current_waypoint(drone):
-        current_waypoint = None
         async for mission_progress in drone.mission_raw.mission_progress():
                 print(mission_progress)
                 print(mission_progress.current)
@@ -90,23 +88,17 @@ async def pause_current_mission(drone):
 
 async def get_battery(drone):
         print("getting battery")
-        battery_status = None
         async for battery in drone.telemetry.battery():
-                battery_status = battery.remaining_percent
-                break
-        return battery_status
+                return battery.remaining_percent
 
-async def print_gps_info(drone):
-        gps_info_array = []
-        async for gps_info in drone.telemetry.gps_info():
-                gps_info_array.append(gps_info)
-                
+async def get_current_location(drone):
+        print("getting current location")
+        return [0, 0]
 
-async def print_in_mission(drone):
-        in_mission = False
-        async for flight_mode in drone.telemetry.flight_mode():
-                print(flight_mode)
-                if flight_mode == "MISSION":
-                        in_mission = True
-                        break
-        return in_mission
+async def get_progress_percent(drone):
+        print("getting progress percent")
+        return 0
+
+async def get_in_mission(drone):
+        print("getting in mission")
+        return True

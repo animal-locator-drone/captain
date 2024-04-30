@@ -1,21 +1,18 @@
 from configparser import ConfigParser
 import os
 from uuid import uuid4
-import uvicorn
-import time
-from multiprocessing import Process, Queue
+import asyncio
 
+import uvicorn
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
 
-import asyncio
+
 
 import drone_flight
 
 drone = None
-
 last_waypoint_index = 0
-
 spiral_task = None
 
 class Mission(BaseModel):
@@ -23,26 +20,25 @@ class Mission(BaseModel):
         name: str
         path_preview: str
 
-missions_store = [Mission(
-                        id=str(uuid4()),
-                        name=file.split(".")[0],
-                        path_preview="path"+str(uuid4())
-                ) for file in os.listdir("missions_available")]
+missions_store = [
+        Mission(
+                id=str(uuid4()),
+                name=file.split(".")[0],
+                path_preview="path"+str(uuid4())
+        ) for file in os.listdir("missions_available")
+]
 
 app = FastAPI()
 
 def read_config():
-    # Read configuration from config.ini
-    config = ConfigParser()
-    config.read('config.ini')
-    # Get configuration values
-    host = config.get('app', 'host')
-    port = config.getint('app', 'port')
-    do_reload = config.getboolean('app', 'reload')
-    return host, port, do_reload
+        config = ConfigParser()
+        config.read('config.ini')
 
-# Define FastAPI routes
+        host = config.get('app', 'host')
+        port = config.getint('app', 'port')
+        do_reload = config.getboolean('app', 'reload')
 
+        return host, port, do_reload
 
 @app.get("/missions_available")
 # async def missions_available() -> list[Mission]: # new python
@@ -54,18 +50,14 @@ async def init_drone():
         drone = await drone_flight.initialize_drone()
         return drone
 
-
 @app.post("/select_mission/{mission_id}", status_code=200)
 async def select_mission(mission_id: str, response: Response):
-        global drone
         if not os.path.exists("missions_available"):
                 response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
                 return {"status": "error - mission folder missing"}
         if mission_id + ".plan" not in os.listdir("missions_available"):
                 response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
                 return {"status": "error - mission not found"}
-        
-        # drone = await drone_flight.initialize_drone()
         if drone:
                 await drone_flight.run_mission(drone, mission_id)
                 return {"status": f"success - mission {mission_id} selected"}
@@ -73,13 +65,11 @@ async def select_mission(mission_id: str, response: Response):
                 await asyncio.wait_for(
                         init_drone(),
                         timeout=10
-                )
-                
+                ) 
         except asyncio.TimeoutError:
                 print("Drone initialization timeout")
                 response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
                 return {"status": "error - drone initialization timeout"}
-        
         if not drone:
                 print("Drone connection failed")
                 response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -91,8 +81,8 @@ async def select_mission(mission_id: str, response: Response):
 @app.post("/track_dog/{dog_id}", status_code=200)
 async def track_dog(dog_id: str, response: Response):
         global last_waypoint_index
-        global drone
         global spiral_task
+        
         if not drone:
                 response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
                 return {"status": "error - drone not connected"}
@@ -119,7 +109,6 @@ class MissionStatus(BaseModel):
 
 @app.get("/mission_status")
 async def mission_status() -> MissionStatus:
-        global drone
         if not drone:
                 return MissionStatus(
                         battery_percent=0,
@@ -140,10 +129,6 @@ async def mission_status() -> MissionStatus:
                 progress_percent=0,
                 in_mission=True
         )
-        
-        
-        
-
 
 @app.post("/abort_mission")
 async def abort_mission():
