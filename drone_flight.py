@@ -19,43 +19,50 @@ async def initialize_drone():
         #         return None
 
 async def spiral(drone):
-    ## Spiral flight pattern
-    # Set the initial position
-    start_position = None
-    async for position in drone.telemetry.position():
-        start_position = position
-        start_lat = start_position.latitude_deg
-        start_lon = start_position.longitude_deg
-        start_altitude = start_position.absolute_altitude_m
-        break
+        ## Spiral flight pattern
+        # Set the initial position
+        start_position = None
+        async for position in drone.telemetry.position():
+                start_position = position
+                start_lat = start_position.latitude_deg
+                start_lon = start_position.longitude_deg
+                start_altitude = start_position.absolute_altitude_m
+                break
 
-    # Convert to radians
-    start_lat_rad = math.radians(start_lat)
-    start_lon_rad = math.radians(start_lon)
+        print("start lat: ", start_lat, "start_lon: ", start_lon)
 
-    # Set the spiral parameters
-    a = 1
-    radius = 1
-    target_radius = 50
-    theta = math.atan2(start_lat_rad, start_lon_rad)
+        # Convert to radians
+        start_lat_rad = math.radians(start_lat)
+        start_lon_rad = math.radians(start_lon)
 
-    # Fly the spiral pattern
-    while radius < target_radius:
-        # Calculate the current position on the spiral
-        radius = a * theta
-        curr_lat = radius * math.cos(theta)
-        curr_lon = radius * math.sin(theta)
+        # Set the spiral parameters
+        a = 1
+        radius = 1
+        target_radius = 5
+        theta = math.atan2(start_lat_rad, start_lon_rad)
 
-        # Move the drone to the current position
-        await drone.action.goto_location(
-            latitude_deg=math.degrees(curr_lat),
-            longitude_deg=math.degrees(curr_lon), 
-            absolute_altitude_m=start_altitude,
-            yaw_deg=0)
+        # Fly the spiral pattern
+        while radius < target_radius:
+                # Calculate the current position on the spiral
+                radius = a * theta
+                curr_lat = radius * math.cos(theta)
+                curr_lon = radius * math.sin(theta)
 
-        # Increase the radius for the next loop
-        theta += 5
-        
+                # Move the drone to the current position
+                await drone.action.goto_location(
+                        latitude_deg=math.degrees(curr_lat),
+                        longitude_deg=math.degrees(curr_lon),
+                        absolute_altitude_m=start_altitude,
+                        yaw_deg=0
+                )
+                # print("radius: ", radius, "target_radius: ", target_radius, "theta: ", theta)
+                print("lat: ", math.degrees(curr_lat), "lon: ", math.degrees(curr_lon))
+
+                await asyncio.sleep(10)
+
+                # Increase the radius for the next loop
+                theta += 0.1
+                
 async def run_mission(drone, mission):
         mission_import_data = await \
                 drone.mission_raw.import_qgroundcontrol_mission(
@@ -68,7 +75,18 @@ async def run_mission(drone, mission):
         print("-- Takeoff")
         await drone.action.takeoff()
         print("-- Starting mission")
-        await drone.mission.start_mission()
+        await drone.mission_raw.start_mission()
+
+
+async def get_current_waypoint(drone):
+        current_waypoint = None
+        async for mission_progress in drone.mission_raw.mission_progress():
+                print(mission_progress)
+                print(mission_progress.current)
+                return mission_progress.current
+
+async def pause_current_mission(drone):
+        await drone.mission_raw.pause_mission()
 
 async def get_battery(drone):
         print("getting battery")

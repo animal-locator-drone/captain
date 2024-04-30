@@ -14,6 +14,10 @@ import drone_flight
 
 drone = None
 
+last_waypoint_index = 0
+
+spiral_task = None
+
 class Mission(BaseModel):
         id: str
         name: str
@@ -53,6 +57,7 @@ async def init_drone():
 
 @app.post("/select_mission/{mission_id}", status_code=200)
 async def select_mission(mission_id: str, response: Response):
+        global drone
         if not os.path.exists("missions_available"):
                 response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
                 return {"status": "error - mission folder missing"}
@@ -83,9 +88,25 @@ async def select_mission(mission_id: str, response: Response):
         await drone_flight.run_mission(drone, mission_id)
         return {"status": f"success - mission {mission_id} selected"}
 
-@app.post("/track_dog/{dog_id}")
-async def track_dog(dog_id: str):
-        drone_flight.spiral(drone)
+@app.post("/track_dog/{dog_id}", status_code=200)
+async def track_dog(dog_id: str, response: Response):
+        global last_waypoint_index
+        global drone
+        global spiral_task
+        if not drone:
+                response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+                return {"status": "error - drone not connected"}
+        
+        print("getting current waypoint")
+        last_waypoint_index = await drone_flight.get_current_waypoint(drone)
+        
+        print("pausing current mission")
+        await drone_flight.pause_current_mission(drone)
+        
+        print("begin spiral mode")
+        spiral_task = asyncio.ensure_future(drone_flight.spiral(drone))
+        
+        print("done")
         return {"status": "success"}
 
 class MissionStatus(BaseModel):
@@ -98,6 +119,7 @@ class MissionStatus(BaseModel):
 
 @app.get("/mission_status")
 async def mission_status() -> MissionStatus:
+        global drone
         if not drone:
                 return MissionStatus(
                         battery_percent=0,
@@ -125,15 +147,24 @@ async def mission_status() -> MissionStatus:
 
 @app.post("/abort_mission")
 async def abort_mission():
+        global drone
+        global spiral_task
+        if spiral_task:
+                await asyncio.wait_for(
+                        spiral_task,
+                        timeout=10
+                )
         await drone.action.return_to_launch()
         return {"status": "success"}
 
 @app.get("/current_location")
 async def current_location():
+        global drone
         return {"current_location": [1, 2]}
 
 # Run the FastAPI app with configured options
 if __name__ == '__main__':
         host, port, reload = read_config()
         uvicorn.run("main:app", host=host, port=port, reload=reload)
+        
     
