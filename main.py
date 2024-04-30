@@ -120,14 +120,17 @@ async def mission_status() -> MissionStatus:
                 )
         
         battery_percent = await drone_flight.get_battery(drone)
+        current_location = await drone_flight.get_current_location(drone)
+        progress_percent = await drone_flight.get_progress_percent(drone)
+        in_mission = await drone_flight.get_in_mission(drone)
         
         return MissionStatus(
                 battery_percent=battery_percent,
                 time_elapsed=0,
-                current_location=[0, 0],
+                current_location=current_location,
                 time_remaining=0,
-                progress_percent=0,
-                in_mission=True
+                progress_percent=progress_percent,
+                in_mission=in_mission
         )
 
 @app.post("/abort_mission")
