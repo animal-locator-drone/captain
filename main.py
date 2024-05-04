@@ -133,6 +133,22 @@ async def mission_status() -> MissionStatus:
                 in_mission=in_mission
         )
 
+@app.post("/resume_mission", status_code=200)
+async def resume_mission(response: Response):
+        global drone
+        global last_waypoint_index
+        global spiral_task
+        
+        if not drone:
+                response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+                return {"status": "error - drone not connected"}
+        
+        if spiral_task:
+                spiral_task.cancel()
+        await drone.mission_raw.start_mission()
+        await drone.mission_raw.set_current_mission_item(last_waypoint_index)
+        return {"status": "success"}
+
 @app.post("/abort_mission")
 async def abort_mission():
         global drone
