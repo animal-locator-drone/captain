@@ -17,7 +17,7 @@ Talks to PX4 and provides telemetry and guidance for the mission.
       1. You will need to rerun this in each new terminal unless you automate with VScode
 5. Install dependencies with pip
    1. `pip install -r requirements.txt`
-6. Edit your config file if necessay `config.ini`
+6. Edit your config file if necessary `config.ini`
 
 ### Running
 
