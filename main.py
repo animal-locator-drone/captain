@@ -154,10 +154,15 @@ async def abort_mission():
         global drone
         global spiral_task
         if spiral_task:
-                await asyncio.wait_for(
-                        spiral_task,
-                        timeout=10
-                )
+                spiral_task.cancel()
+                try:
+                        await asyncio.wait_for(spiral_task, timeout=10)
+                except asyncio.CancelledError:
+                        pass
+                except asyncio.TimeoutError:
+                        pass
+                finally:
+                        spiral_task = None
         await drone.action.return_to_launch()
         return {"status": "success"}
 
